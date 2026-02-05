@@ -1,0 +1,328 @@
+{"time":"2026-02-05T23:42:41.788306+09:00","level":"INFO","msg":"article retrieved","id":"test-001","title":"サンプル記事","status":"published"}
+{
+	"Name": "ArticleRepository.FindByID",
+	"SpanContext": {
+		"TraceID": "74f34734853042574d83ace8006fd895",
+		"SpanID": "8ec7b0888589fea2",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "74f34734853042574d83ace8006fd895",
+		"SpanID": "0ae3702c2cdda797",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 3,
+	"StartTime": "2026-02-05T23:42:41.788291+09:00",
+	"EndTime": "2026-02-05T23:42:41.788293+09:00",
+	"Attributes": [
+		{
+			"Key": "db.system",
+			"Value": {
+				"Type": "STRING",
+				"Value": "postgresql"
+			}
+		},
+		{
+			"Key": "db.operation",
+			"Value": {
+				"Type": "STRING",
+				"Value": "SELECT"
+			}
+		},
+		{
+			"Key": "article.id",
+			"Value": {
+				"Type": "STRING",
+				"Value": "test-001"
+			}
+		}
+	],
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"InstrumentationScope": {
+		"Name": "repository/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	},
+	"InstrumentationLibrary": {
+		"Name": "repository/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	}
+}
+{
+	"Name": "ArticleUsecase.GetByID",
+	"SpanContext": {
+		"TraceID": "74f34734853042574d83ace8006fd895",
+		"SpanID": "0ae3702c2cdda797",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "74f34734853042574d83ace8006fd895",
+		"SpanID": "d65e8ed95ca76201",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "2026-02-05T23:42:41.788289+09:00",
+	"EndTime": "2026-02-05T23:42:41.788300042+09:00",
+	"Attributes": [
+		{
+			"Key": "article.id",
+			"Value": {
+				"Type": "STRING",
+				"Value": "test-001"
+			}
+		},
+		{
+			"Key": "article.title",
+			"Value": {
+				"Type": "STRING",
+				"Value": "サンプル記事"
+			}
+		},
+		{
+			"Key": "article.status",
+			"Value": {
+				"Type": "STRING",
+				"Value": "published"
+			}
+		}
+	],
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"InstrumentationScope": {
+		"Name": "usecase/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	},
+	"InstrumentationLibrary": {
+		"Name": "usecase/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	}
+}
+{
+	"Name": "http-server",
+	"SpanContext": {
+		"TraceID": "74f34734853042574d83ace8006fd895",
+		"SpanID": "d65e8ed95ca76201",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "00000000000000000000000000000000",
+		"SpanID": "0000000000000000",
+		"TraceFlags": "00",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 2,
+	"StartTime": "2026-02-05T23:42:41.788274+09:00",
+	"EndTime": "2026-02-05T23:42:41.788358958+09:00",
+	"Attributes": [
+		{
+			"Key": "server.address",
+			"Value": {
+				"Type": "STRING",
+				"Value": "localhost"
+			}
+		},
+		{
+			"Key": "http.request.method",
+			"Value": {
+				"Type": "STRING",
+				"Value": "GET"
+			}
+		},
+		{
+			"Key": "url.scheme",
+			"Value": {
+				"Type": "STRING",
+				"Value": "http"
+			}
+		},
+		{
+			"Key": "server.port",
+			"Value": {
+				"Type": "INT64",
+				"Value": 8080
+			}
+		},
+		{
+			"Key": "network.peer.address",
+			"Value": {
+				"Type": "STRING",
+				"Value": "127.0.0.1"
+			}
+		},
+		{
+			"Key": "network.peer.port",
+			"Value": {
+				"Type": "INT64",
+				"Value": 54582
+			}
+		},
+		{
+			"Key": "user_agent.original",
+			"Value": {
+				"Type": "STRING",
+				"Value": "vscode-restclient"
+			}
+		},
+		{
+			"Key": "client.address",
+			"Value": {
+				"Type": "STRING",
+				"Value": "127.0.0.1"
+			}
+		},
+		{
+			"Key": "url.path",
+			"Value": {
+				"Type": "STRING",
+				"Value": "/articles/test-001"
+			}
+		},
+		{
+			"Key": "network.protocol.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.1"
+			}
+		},
+		{
+			"Key": "http.response.body.size",
+			"Value": {
+				"Type": "INT64",
+				"Value": 68
+			}
+		},
+		{
+			"Key": "http.response.status_code",
+			"Value": {
+				"Type": "INT64",
+				"Value": 200
+			}
+		}
+	],
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"InstrumentationScope": {
+		"Name": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		"Version": "0.65.0",
+		"SchemaURL": "",
+		"Attributes": null
+	},
+	"InstrumentationLibrary": {
+		"Name": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		"Version": "0.65.0",
+		"SchemaURL": "",
+		"Attributes": null
+	}
+}

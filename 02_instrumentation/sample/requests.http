@@ -1,0 +1,26 @@
+### 変数定義
+@baseUrl = http://localhost:8080
+
+### 記事取得 (正常系)
+GET {{baseUrl}}/articles/article-123
+
+### 記事取得 (別ID)
+GET {{baseUrl}}/articles/test-001
+
+### 記事作成
+POST {{baseUrl}}/articles
+Content-Type: application/json
+
+{
+  "title": "OpenTelemetry 入門",
+  "content": "計装の基本を学ぶ"
+}
+
+### 記事作成 (別データ)
+POST {{baseUrl}}/articles
+Content-Type: application/json
+
+{
+  "title": "分散トレーシング実践",
+  "content": "マイクロサービスの可観測性"
+}

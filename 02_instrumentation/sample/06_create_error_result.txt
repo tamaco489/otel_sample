@@ -1,0 +1,346 @@
+{"time":"2026-02-05T23:45:07.943721+09:00","level":"ERROR","msg":"failed to create article","error":"database connection error"}
+{
+	"Name": "ArticleRepository.Create",
+	"SpanContext": {
+		"TraceID": "256ef874220dfdfa56a8253007191692",
+		"SpanID": "2ba1f1a5a2c37685",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "256ef874220dfdfa56a8253007191692",
+		"SpanID": "7e5476a9da9e59b6",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 3,
+	"StartTime": "2026-02-05T23:45:07.943707+09:00",
+	"EndTime": "2026-02-05T23:45:07.943708667+09:00",
+	"Attributes": [
+		{
+			"Key": "db.system",
+			"Value": {
+				"Type": "STRING",
+				"Value": "postgresql"
+			}
+		},
+		{
+			"Key": "db.operation",
+			"Value": {
+				"Type": "STRING",
+				"Value": "INSERT"
+			}
+		}
+	],
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"InstrumentationScope": {
+		"Name": "repository/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	},
+	"InstrumentationLibrary": {
+		"Name": "repository/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	}
+}
+{
+	"Name": "ArticleUsecase.Create",
+	"SpanContext": {
+		"TraceID": "256ef874220dfdfa56a8253007191692",
+		"SpanID": "7e5476a9da9e59b6",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "256ef874220dfdfa56a8253007191692",
+		"SpanID": "4d1fe0ed9bfec84d",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "2026-02-05T23:45:07.943703+09:00",
+	"EndTime": "2026-02-05T23:45:07.943715417+09:00",
+	"Attributes": null,
+	"Events": [
+		{
+			"Name": "validation_started",
+			"Attributes": null,
+			"DroppedAttributeCount": 0,
+			"Time": "2026-02-05T23:45:07.943704+09:00"
+		},
+		{
+			"Name": "validation_completed",
+			"Attributes": null,
+			"DroppedAttributeCount": 0,
+			"Time": "2026-02-05T23:45:07.943705+09:00"
+		},
+		{
+			"Name": "create_started",
+			"Attributes": null,
+			"DroppedAttributeCount": 0,
+			"Time": "2026-02-05T23:45:07.943705+09:00"
+		},
+		{
+			"Name": "exception",
+			"Attributes": [
+				{
+					"Key": "exception.type",
+					"Value": {
+						"Type": "STRING",
+						"Value": "*errors.errorString"
+					}
+				},
+				{
+					"Key": "exception.message",
+					"Value": {
+						"Type": "STRING",
+						"Value": "database connection error"
+					}
+				}
+			],
+			"DroppedAttributeCount": 0,
+			"Time": "2026-02-05T23:45:07.943715+09:00"
+		}
+	],
+	"Links": null,
+	"Status": {
+		"Code": "Error",
+		"Description": "database connection error"
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"InstrumentationScope": {
+		"Name": "usecase/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	},
+	"InstrumentationLibrary": {
+		"Name": "usecase/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	}
+}
+{
+	"Name": "http-server",
+	"SpanContext": {
+		"TraceID": "256ef874220dfdfa56a8253007191692",
+		"SpanID": "4d1fe0ed9bfec84d",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "00000000000000000000000000000000",
+		"SpanID": "0000000000000000",
+		"TraceFlags": "00",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 2,
+	"StartTime": "2026-02-05T23:45:07.943667+09:00",
+	"EndTime": "2026-02-05T23:45:07.943790375+09:00",
+	"Attributes": [
+		{
+			"Key": "server.address",
+			"Value": {
+				"Type": "STRING",
+				"Value": "localhost"
+			}
+		},
+		{
+			"Key": "http.request.method",
+			"Value": {
+				"Type": "STRING",
+				"Value": "POST"
+			}
+		},
+		{
+			"Key": "url.scheme",
+			"Value": {
+				"Type": "STRING",
+				"Value": "http"
+			}
+		},
+		{
+			"Key": "server.port",
+			"Value": {
+				"Type": "INT64",
+				"Value": 8080
+			}
+		},
+		{
+			"Key": "network.peer.address",
+			"Value": {
+				"Type": "STRING",
+				"Value": "::1"
+			}
+		},
+		{
+			"Key": "network.peer.port",
+			"Value": {
+				"Type": "INT64",
+				"Value": 54606
+			}
+		},
+		{
+			"Key": "user_agent.original",
+			"Value": {
+				"Type": "STRING",
+				"Value": "curl/8.7.1"
+			}
+		},
+		{
+			"Key": "client.address",
+			"Value": {
+				"Type": "STRING",
+				"Value": "::1"
+			}
+		},
+		{
+			"Key": "url.path",
+			"Value": {
+				"Type": "STRING",
+				"Value": "/articles"
+			}
+		},
+		{
+			"Key": "network.protocol.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.1"
+			}
+		},
+		{
+			"Key": "http.request.body.size",
+			"Value": {
+				"Type": "INT64",
+				"Value": 36
+			}
+		},
+		{
+			"Key": "http.response.body.size",
+			"Value": {
+				"Type": "INT64",
+				"Value": 26
+			}
+		},
+		{
+			"Key": "http.response.status_code",
+			"Value": {
+				"Type": "INT64",
+				"Value": 500
+			}
+		}
+	],
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Error",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"InstrumentationScope": {
+		"Name": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		"Version": "0.65.0",
+		"SchemaURL": "",
+		"Attributes": null
+	},
+	"InstrumentationLibrary": {
+		"Name": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		"Version": "0.65.0",
+		"SchemaURL": "",
+		"Attributes": null
+	}
+}
