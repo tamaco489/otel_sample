@@ -46,13 +46,27 @@ func (u *articleUsecase) GetByID(ctx context.Context, id string) (*entity.Articl
 		attribute.String("article.status", article.Status),
 	)
 
-	// NOTE: メトリクス: 記事閲覧数をインクリメント
+	// メトリクス: 記事閲覧数をインクリメント
+	//
+	// NOTE: カーディナリティ (属性の組み合わせ数) に注意。
+	// メトリクスの属性は「値の種類が有限」であることが前提。属性の組み合わせごとに独立した時系列 (データポイント) が生成されるため、ユニークな値が無制限に増える。
+	// 属性 (例: article_id) を使うと時系列が爆発し、バックエンドのストレージとクエリ性能に深刻な影響を与える (カーディナリティ爆発)。
+	//
+	// 本サンプルでは学習目的で article_id を使用しているが、本番では以下のように低カーディナリティ属性 (status, category 等) のみを使い、
+	// article_id のような高カーディナリティ属性はトレース (span attribute) で記録する。
 	articleViewsCounter.Add(ctx, 1,
 		metric.WithAttributes(
 			attribute.String("article_id", article.ID),
 			attribute.String("category_id", "general"),
 		),
 	)
+	// 本番例:
+	//   articleViewsCounter.Add(ctx, 1,
+	//       metric.WithAttributes(
+	//           attribute.String("status", "published"),  // 数パターンに限定
+	//           attribute.String("category", "tech"),      // 数十パターン程度
+	//       ),
+	//   )
 
 	return article, nil
 }

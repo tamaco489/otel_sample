@@ -33,7 +33,9 @@ type Provider struct {
 
 // NewProvider は OTEL Provider を初期化
 func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
+	// =======================================================
 	// 1. リソースの定義 (全テレメトリ共通)
+	// =======================================================
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceName(cfg.ServiceName),
@@ -45,7 +47,9 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 		return nil, err
 	}
 
+	// =======================================================
 	// 2. Trace Exporter の作成 (開発環境のため標準出力に出力)
+	// =======================================================
 	traceExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
 		return nil, err
@@ -56,8 +60,9 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 	//     otlptracegrpc.WithInsecure(), // TLS なしの場合
 	// )
 
+	// =======================================================
 	// 3. TracerProvider の作成
-	//
+	// =======================================================
 	// - WithBatcher: スパンを即時エクスポートせず、バッチに溜めてからまとめて送信する。
 	//   SimpleSpanProcessor (即時送信) もあるが、本番ではバッチが推奨。
 	//
@@ -81,7 +86,9 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
 
+	// =======================================================
 	// 4. Metric Exporter の作成 (開発環境のため標準出力に出力)
+	// =======================================================
 	metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	if err != nil {
 		return nil, err
@@ -92,44 +99,61 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 	//     otlpmetricgrpc.WithInsecure(), // TLS なしの場合
 	// )
 
+	// =======================================================
 	// 5. MeterProvider の作成
-	//
-	// メトリクスの目的は「アプリの状態を定期的に観測すること」。
-	// トレースはリクエストが来たら記録するが、メトリクスはリクエストの有無に関係なく
-	// 一定間隔で「この期間の状態はこうだった」というスナップショットを記録し続ける。
-	//
-	// 定期エクスポートが必要な理由:
-	//   - Grafana 等のダッシュボードでレイテンシ推移をグラフ表示するには、等間隔のデータポイントが必要
-	//   - リクエストが0件の時間帯に「データなし」と「サービスダウン」を区別するため
-	//   - Observable Gauge のように、リクエストと無関係に観測したい値を取得するため
-	//
-	// 本サンプルでは stdoutmetric を使用しているため10秒ごとに大量の JSON がログに流れるが、
-	// 本番で OTLP Collector (Prometheus 等) に送る場合はバックエンドに静かに蓄積される。
-	//
-	// TracerProvider との違い:
-	//
-	// - BatchSize に相当する設定がない:
-	//   トレースはスパン1件1件が独立したデータであり、バッチに溜めてからエクスポートする。
-	//   メトリクスは PeriodicReader の収集タイミングで全メトリクスが集約済みの状態になる。
-	//   例えば Counter.Add(1) を100回呼んでも、エクスポート時には Value:100 という
-	//   1つのデータポイントになるため、「何件溜まったら送るか」という概念自体がない。
-	//
-	// - Sampler に相当する設定がない:
-	//   トレースはリクエストごとにスパンが生成され、高トラフィック時にデータ量が膨大になるため
-	//   サンプリング (一部だけ記録) が必要になる。
-	//   メトリクスは上記の通り集約済みなので、リクエスト数が増えてもデータポイント数は増えない。
-	//   Counter は常に1つの累計値、Histogram はバケットごとの固定数の値であるため、
-	//   サンプリングの必要がなく、SDK にも API が存在しない。
+	// =======================================================
+
+	/*
+		- NOTE: メトリクスを取得する目的:
+			- 「アプリの状態を定期的に観測すること」。
+			- トレースはリクエストが来たら記録するが、メトリクスはリクエストの有無に関係なく一定間隔で「この期間の状態はこうだった」というスナップショットを記録し続ける。
+
+		- NOTE: 定期エクスポートが必要な理由:
+			- Grafana 等のダッシュボードでレイテンシ推移をグラフ表示するには、等間隔のデータポイントが必要
+			- リクエストが0件の時間帯に「データなし」と「サービスダウン」を区別するため
+			- Observable Gauge のように、リクエストと無関係に観測したい値を取得するため
+			- 補足事項: 本サンプルでは stdoutmetric を使用しているため10秒ごとに大量の JSON がログに流れるが、本番で OTLP Collector (Prometheus 等) に送る場合はバックエンドに静かに蓄積される。
+
+		- NOTE: stdoutmetric の出力が大量に見える理由:
+			- 累積で増えるのは「データポイントの値 (例: Counter の合計値)」であり「送信データ量」ではない。
+			- 例えば article.views.total の Value が 5 → 38 → 1,247 → 89,412 と増えても、毎回送信されるのは1つの数値であり、送信サイズはほぼ変わらない。
+			- stdoutmetric の JSON が大量に見えるのは、pretty print により1データポイントあたりAttributes (~7個), Bounds (15個), BucketCounts (16個), Exemplars 等が展開され、約80〜100行の JSON になるため。protobuf バイナリでは同じ情報が数十バイトで表現される。
+			- つまり本番の OTLP (protobuf) エクスポートでは、送信データ量は時系列数に比例するだけで、リクエスト数の増加や累積値の増大によってデータ量が膨張することはない。
+	*/
+
+	/*
+		- NOTE: TracerProvider との違い:
+			- BatchSize に相当する設定がない:
+			- トレースはスパン1件1件が独立したデータであり、バッチに溜めてからエクスポートする。
+			- メトリクスは PeriodicReader の収集タイミングで全メトリクスが集約済みの状態になる。
+			- 例えば Counter.Add(1) を100回呼んでも、エクスポート時には Value:100 という
+			- 1つのデータポイントになるため、「何件溜まったら送るか」という概念自体がない。
+
+		- NOTE: Sampler に相当する設定がない:
+			- トレースはリクエストごとにスパンが生成され、高トラフィック時にデータ量が膨大になるためサンプリング (一部だけ記録) が必要になる。
+			- メトリクスは上記の通り集約済みなので、リクエスト数が増えてもデータポイント数は増えない。
+			- Counter は常に1つの累計値、Histogram はバケットごとの固定数の値であるため、サンプリングの必要がなく、SDK にも API が存在しない。
+
+		- NOTE: PeriodicReader はデフォルトで CumulativeTemporality (累積的時間性) を使用する。
+			- Cumulative: 毎回「起動時からの累計値」を送信する (例: Value: 89,412)。Prometheus 等が採用。
+			- Delta:      毎回「前回エクスポートからの差分」を送信する (例: Value: +23)。Datadog 等が採用。
+			- 補足事項:
+				- どちらも1データポイントのサイズは変わらないため、送信データ量に差はない。
+				- 違いは「途中のエクスポートが欠落した場合に復元できるか」という信頼性の面にある。
+				- Temporality を変更するには WithTemporalitySelector オプションを PeriodicReader に渡す。
+	*/
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(res),
 		sdkmetric.WithReader(
-			sdkmetric.NewPeriodicReader(metricExporter,
+			sdkmetric.NewPeriodicReader(metricExporter, // NOTE: デフォルトで CumulativeTemporality (累積) が適用される
 				sdkmetric.WithInterval(10*time.Second), // NOTE: 10秒間隔でメトリクスを収集・エクスポート
 			),
 		),
 	)
 
+	// =======================================================
 	// 6. グローバルに設定
+	// =======================================================
 	otel.SetTracerProvider(tp)
 	otel.SetMeterProvider(mp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
