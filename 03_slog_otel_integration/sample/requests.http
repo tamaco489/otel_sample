@@ -1,0 +1,20 @@
+### 記事取得
+GET http://localhost:8080/articles/article-123
+
+### 記事作成
+POST http://localhost:8080/articles
+Content-Type: application/json
+
+{
+  "Title": "OpenTelemetry入門",
+  "Content": "slogとOTELの統合について"
+}
+
+### 記事作成 (バリデーションエラー)
+POST http://localhost:8080/articles
+Content-Type: application/json
+
+{
+  "Title": "",
+  "Content": "タイトルなし"
+}
