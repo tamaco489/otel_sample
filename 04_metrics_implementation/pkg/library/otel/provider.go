@@ -45,12 +45,16 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 		return nil, err
 	}
 
-	// 2. Trace Exporter の作成 (標準出力に出力)
-	// 本番環境では otlptracegrpc.New() を使用して OTLP Collector に送信
+	// 2. Trace Exporter の作成 (開発環境のため標準出力に出力)
 	traceExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
+	// 本番環境では otlptracegrpc.New() を使用して OTLP Collector に送信する。※バイナリ形式で送信する方が効率が良い
+	// traceExporter, err := otlptracegrpc.New(ctx,
+	//     otlptracegrpc.WithEndpoint("otel-collector:4317"),
+	//     otlptracegrpc.WithInsecure(), // TLS なしの場合
+	// )
 
 	// 3. TracerProvider の作成
 	//
@@ -77,13 +81,30 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
 
-	// 4. Metric Exporter の作成 (標準出力に出力)
+	// 4. Metric Exporter の作成 (開発環境のため標準出力に出力)
 	metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
+	// 本番環境では otlpmetricgrpc.New() を使用して OTLP Collector に送信する。※バイナリ形式で送信する方が効率が良い
+	// metricExporter, err := otlpmetricgrpc.New(ctx,
+	//     otlpmetricgrpc.WithEndpoint("otel-collector:4317"),
+	//     otlpmetricgrpc.WithInsecure(), // TLS なしの場合
+	// )
 
 	// 5. MeterProvider の作成
+	//
+	// メトリクスの目的は「アプリの状態を定期的に観測すること」。
+	// トレースはリクエストが来たら記録するが、メトリクスはリクエストの有無に関係なく
+	// 一定間隔で「この期間の状態はこうだった」というスナップショットを記録し続ける。
+	//
+	// 定期エクスポートが必要な理由:
+	//   - Grafana 等のダッシュボードでレイテンシ推移をグラフ表示するには、等間隔のデータポイントが必要
+	//   - リクエストが0件の時間帯に「データなし」と「サービスダウン」を区別するため
+	//   - Observable Gauge のように、リクエストと無関係に観測したい値を取得するため
+	//
+	// 本サンプルでは stdoutmetric を使用しているため10秒ごとに大量の JSON がログに流れるが、
+	// 本番で OTLP Collector (Prometheus 等) に送る場合はバックエンドに静かに蓄積される。
 	//
 	// TracerProvider との違い:
 	//
