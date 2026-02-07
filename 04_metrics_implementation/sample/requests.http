@@ -1,0 +1,25 @@
+@host = http://localhost:8080
+
+### 記事取得 (Counter: article.views.total がインクリメントされる)
+GET {{host}}/articles/article-123
+
+### 記事取得 (別のID)
+GET {{host}}/articles/article-456
+
+### 記事作成 (成功時: Histogram に処理時間が記録される)
+POST {{host}}/articles
+Content-Type: application/json
+
+{
+  "Title": "OpenTelemetry Metrics入門",
+  "Content": "Counter, Histogram, Observable Gaugeの使い方"
+}
+
+### 記事作成 (バリデーションエラー: status=validation_error で Histogram に記録)
+POST {{host}}/articles
+Content-Type: application/json
+
+{
+  "Title": "",
+  "Content": "タイトルなし"
+}
