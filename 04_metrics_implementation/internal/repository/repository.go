@@ -16,10 +16,3 @@ var publishedCount atomic.Int64
 func (r *articleRepository) GetPublishedCount(_ context.Context) int64 {
 	return publishedCount.Load()
 }
-
-// Article は記事エンティティ
-type Article struct {
-	ID     string
-	Title  string
-	Status string
-}

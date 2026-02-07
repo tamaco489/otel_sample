@@ -3,14 +3,15 @@ package usecase
 import (
 	"context"
 
+	"github.com/tamaco489/otel_sample/04_metrics_implementation/internal/entity"
 	"github.com/tamaco489/otel_sample/04_metrics_implementation/internal/repository"
 	"go.opentelemetry.io/otel/metric"
 )
 
 // ArticleUsecase は記事ユースケースのインターフェース
 type ArticleUsecase interface {
-	GetByID(ctx context.Context, id string) (*repository.Article, error)
-	Create(ctx context.Context, input *CreateArticleInput) (*repository.Article, error)
+	GetByID(ctx context.Context, id string) (*entity.Article, error)
+	Create(ctx context.Context, input *CreateArticleInput) (*entity.Article, error)
 }
 
 // articleUsecase は ArticleUsecase の実装

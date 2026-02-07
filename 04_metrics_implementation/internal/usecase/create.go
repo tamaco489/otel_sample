@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tamaco489/otel_sample/04_metrics_implementation/internal/repository"
+	"github.com/tamaco489/otel_sample/04_metrics_implementation/internal/entity"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
@@ -29,7 +29,7 @@ func (i *CreateArticleInput) Validate() error {
 }
 
 // Create は記事を作成する (イベント記録の例)
-func (u *articleUsecase) Create(ctx context.Context, input *CreateArticleInput) (*repository.Article, error) {
+func (u *articleUsecase) Create(ctx context.Context, input *CreateArticleInput) (*entity.Article, error) {
 	startTime := time.Now()
 
 	ctx, span := tracer.Start(ctx, "ArticleUsecase.Create")
@@ -56,7 +56,7 @@ func (u *articleUsecase) Create(ctx context.Context, input *CreateArticleInput) 
 	span.AddEvent("create_started")
 
 	// リポジトリで作成
-	article := &repository.Article{
+	article := &entity.Article{
 		Title: input.Title,
 	}
 	created, err := u.repo.Create(ctx, article)

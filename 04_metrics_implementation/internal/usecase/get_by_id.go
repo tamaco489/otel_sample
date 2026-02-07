@@ -3,17 +3,17 @@ package usecase
 import (
 	"context"
 
-	"github.com/tamaco489/otel_sample/04_metrics_implementation/internal/repository"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/tamaco489/otel_sample/04_metrics_implementation/internal/entity"
 	apperrors "github.com/tamaco489/otel_sample/04_metrics_implementation/pkg/errors"
 )
 
 // GetByID は記事をIDで取得する (手動計装の例)
-func (u *articleUsecase) GetByID(ctx context.Context, id string) (*repository.Article, error) {
+func (u *articleUsecase) GetByID(ctx context.Context, id string) (*entity.Article, error) {
 	// スパンの開始
 	// SpanKindInternal: 内部処理を表す (デフォルト)
 	ctx, span := tracer.Start(ctx, "ArticleUsecase.GetByID",

@@ -4,12 +4,13 @@ import (
 	"context"
 	"math/rand"
 
+	"github.com/tamaco489/otel_sample/04_metrics_implementation/internal/entity"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
 // FindByID は記事をIDで取得する
-func (r *articleRepository) FindByID(ctx context.Context, id string) (*Article, error) {
+func (r *articleRepository) FindByID(ctx context.Context, id string) (*entity.Article, error) {
 	// 子スパンを作成
 	// SpanKindClient: 外部サービス (DB等) への呼び出しを表す
 	_, span := tracer.Start(ctx, "ArticleRepository.FindByID",
@@ -27,7 +28,7 @@ func (r *articleRepository) FindByID(ctx context.Context, id string) (*Article, 
 		return nil, nil
 	}
 
-	return &Article{
+	return &entity.Article{
 		ID:     id,
 		Title:  "サンプル記事",
 		Status: "published",

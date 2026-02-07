@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/rand"
 
+	"github.com/tamaco489/otel_sample/04_metrics_implementation/internal/entity"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -13,7 +14,7 @@ import (
 var ErrDBConnection = errors.New("database connection error")
 
 // Create は記事を作成する
-func (r *articleRepository) Create(ctx context.Context, article *Article) (*Article, error) {
+func (r *articleRepository) Create(ctx context.Context, article *entity.Article) (*entity.Article, error) {
 	_, span := tracer.Start(ctx, "ArticleRepository.Create",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
