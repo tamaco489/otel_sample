@@ -1,0 +1,907 @@
+// =============================================================================
+// GET http://localhost:8080/articles/article-123 の実行結果
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// 1. slog ログ出力 (OTELHandler により trace_id / span_id が自動注入)
+// -----------------------------------------------------------------------------
+{"time":"2026-02-08T00:50:50.026608+09:00","level":"INFO","msg":"article retrieved","id":"article-123","title":"サンプル記事","status":"published","trace_id":"9f30c8ed60eca2034c034b10dfd5d17b","span_id":"769aaf48e42381f8"}
+
+// -----------------------------------------------------------------------------
+// 2. トレーススパン (BatchSpanProcessor により 5秒後にフラッシュ)
+//    子スパンから順に出力される
+// -----------------------------------------------------------------------------
+
+// --- Span 1: ArticleRepository.FindByID (SpanKind=Client) ---
+{
+	"Name": "ArticleRepository.FindByID",
+	"SpanContext": {
+		"TraceID": "9f30c8ed60eca2034c034b10dfd5d17b",
+		"SpanID": "daa2b83a4390d934",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "9f30c8ed60eca2034c034b10dfd5d17b",
+		"SpanID": "4bf58ad815c89b2b",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 3,
+	"StartTime": "2026-02-08T00:50:50.026583+09:00",
+	"EndTime": "2026-02-08T00:50:50.026583708+09:00",
+	"Attributes": [
+		{
+			"Key": "db.system",
+			"Value": {
+				"Type": "STRING",
+				"Value": "postgresql"
+			}
+		},
+		{
+			"Key": "db.operation",
+			"Value": {
+				"Type": "STRING",
+				"Value": "SELECT"
+			}
+		},
+		{
+			"Key": "article.id",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-123"
+			}
+		}
+	],
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"InstrumentationScope": {
+		"Name": "repository/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	},
+	"InstrumentationLibrary": {
+		"Name": "repository/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	}
+}
+
+// --- Span 2: ArticleUsecase.GetByID (SpanKind=Internal) ---
+{
+	"Name": "ArticleUsecase.GetByID",
+	"SpanContext": {
+		"TraceID": "9f30c8ed60eca2034c034b10dfd5d17b",
+		"SpanID": "4bf58ad815c89b2b",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "9f30c8ed60eca2034c034b10dfd5d17b",
+		"SpanID": "769aaf48e42381f8",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "2026-02-08T00:50:50.026582+09:00",
+	"EndTime": "2026-02-08T00:50:50.026603792+09:00",
+	"Attributes": [
+		{
+			"Key": "article.id",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-123"
+			}
+		},
+		{
+			"Key": "article.title",
+			"Value": {
+				"Type": "STRING",
+				"Value": "サンプル記事"
+			}
+		},
+		{
+			"Key": "article.status",
+			"Value": {
+				"Type": "STRING",
+				"Value": "published"
+			}
+		}
+	],
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"InstrumentationScope": {
+		"Name": "usecase/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	},
+	"InstrumentationLibrary": {
+		"Name": "usecase/article",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": null
+	}
+}
+
+// --- Span 3: http-server (SpanKind=Server, otelhttp 自動計装) ---
+{
+	"Name": "http-server",
+	"SpanContext": {
+		"TraceID": "9f30c8ed60eca2034c034b10dfd5d17b",
+		"SpanID": "769aaf48e42381f8",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "00000000000000000000000000000000",
+		"SpanID": "0000000000000000",
+		"TraceFlags": "00",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 2,
+	"StartTime": "2026-02-08T00:50:50.026575+09:00",
+	"EndTime": "2026-02-08T00:50:50.026651666+09:00",
+	"Attributes": [
+		{
+			"Key": "server.address",
+			"Value": {
+				"Type": "STRING",
+				"Value": "localhost"
+			}
+		},
+		{
+			"Key": "http.request.method",
+			"Value": {
+				"Type": "STRING",
+				"Value": "GET"
+			}
+		},
+		{
+			"Key": "url.scheme",
+			"Value": {
+				"Type": "STRING",
+				"Value": "http"
+			}
+		},
+		{
+			"Key": "server.port",
+			"Value": {
+				"Type": "INT64",
+				"Value": 8080
+			}
+		},
+		{
+			"Key": "network.peer.address",
+			"Value": {
+				"Type": "STRING",
+				"Value": "::1"
+			}
+		},
+		{
+			"Key": "network.peer.port",
+			"Value": {
+				"Type": "INT64",
+				"Value": 63016
+			}
+		},
+		{
+			"Key": "user_agent.original",
+			"Value": {
+				"Type": "STRING",
+				"Value": "curl/8.7.1"
+			}
+		},
+		{
+			"Key": "client.address",
+			"Value": {
+				"Type": "STRING",
+				"Value": "::1"
+			}
+		},
+		{
+			"Key": "url.path",
+			"Value": {
+				"Type": "STRING",
+				"Value": "/articles/article-123"
+			}
+		},
+		{
+			"Key": "network.protocol.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.1"
+			}
+		},
+		{
+			"Key": "http.response.body.size",
+			"Value": {
+				"Type": "INT64",
+				"Value": 71
+			}
+		},
+		{
+			"Key": "http.response.status_code",
+			"Value": {
+				"Type": "INT64",
+				"Value": 200
+			}
+		}
+	],
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"InstrumentationScope": {
+		"Name": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		"Version": "0.65.0",
+		"SchemaURL": "",
+		"Attributes": null
+	},
+	"InstrumentationLibrary": {
+		"Name": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		"Version": "0.65.0",
+		"SchemaURL": "",
+		"Attributes": null
+	}
+}
+
+// -----------------------------------------------------------------------------
+// 3. メトリクス出力 (PeriodicReader により 10秒間隔でエクスポート)
+//    article.views.total の Value が 1 にインクリメントされている
+// -----------------------------------------------------------------------------
+{
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"ScopeMetrics": [
+		{
+			"Scope": {
+				"Name": "usecase/article",
+				"Version": "",
+				"SchemaURL": "",
+				"Attributes": null
+			},
+			"Metrics": [
+				{
+					"Name": "article.views.total",
+					"Description": "記事閲覧数の累計",
+					"Unit": "",
+					"Data": {
+						"DataPoints": [
+							{
+								"Attributes": [
+									{
+										"Key": "article_id",
+										"Value": {
+											"Type": "STRING",
+											"Value": "article-123"
+										}
+									},
+									{
+										"Key": "category_id",
+										"Value": {
+											"Type": "STRING",
+											"Value": "general"
+										}
+									}
+								],
+								"StartTime": "2026-02-08T00:50:09.827328+09:00",
+								"Time": "2026-02-08T00:50:59.828478+09:00",
+								"Value": 1,
+								"Exemplars": [
+									{
+										"FilteredAttributes": null,
+										"Time": "2026-02-08T00:50:50.026603+09:00",
+										"Value": 1,
+										"SpanID": "S/WK2BXImys=",
+										"TraceID": "nzDI7WDsogNMA0sQ39XRew=="
+									}
+								]
+							}
+						],
+						"Temporality": "CumulativeTemporality",
+						"IsMonotonic": true
+					}
+				},
+				{
+					"Name": "article.active.count",
+					"Description": "公開中の記事数",
+					"Unit": "",
+					"Data": {
+						"DataPoints": [
+							{
+								"Attributes": [],
+								"StartTime": "2026-02-08T00:50:09.827336+09:00",
+								"Time": "2026-02-08T00:50:59.828492+09:00",
+								"Value": 0
+							}
+						]
+					}
+				}
+			]
+		}
+	]
+}
+
+
+// -----------------------------------------------------------------------------
+// 4. メトリクス出力 (2回目の PeriodicReader エクスポート)
+//    リクエストがなくても10秒ごとに全登録メトリクスの累積値が出力される。
+//    セクション3と同じ手動メトリクス (usecase/article) に加えて、
+//    otelhttp が自動登録した HTTP サーバーメトリクスも含まれている。
+//
+//    ScopeMetrics の構成:
+//      [1] Scope "usecase/article"           ... 手動計装メトリクス
+//          - article.views.total (Counter)   ... 記事閲覧数の累計
+//          - article.active.count (Gauge)    ... 公開中の記事数
+//      [2] Scope "otelhttp"                  ... otelhttp 自動計装メトリクス
+//          - http.server.request.body.size   ... リクエストボディサイズ (Histogram)
+//          - http.server.response.body.size  ... レスポンスボディサイズ (Histogram)
+//          - http.server.request.duration    ... リクエスト処理時間 (Histogram)
+//
+//    otelhttp のメトリクスが出る理由:
+//      controller/server.go で otelhttp.NewHandler(mux, "http-server") を使用しており、
+//      トレース (スパン) の自動計装だけでなく、メトリクスの自動計装も含まれている。
+//      03 では MeterProvider が未設定だったため記録されなかったが、
+//      04 で otel.SetMeterProvider(mp) を呼んだことでエクスポート対象になった。
+// -----------------------------------------------------------------------------
+{
+	"Resource": [
+		{
+			"Key": "deployment.environment",
+			"Value": {
+				"Type": "STRING",
+				"Value": "development"
+			}
+		},
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "article-api"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.0.0"
+			}
+		}
+	],
+	"ScopeMetrics": [
+		{
+			"Scope": {
+				"Name": "usecase/article",
+				"Version": "",
+				"SchemaURL": "",
+				"Attributes": null
+			},
+			"Metrics": [
+				{
+					"Name": "article.views.total",
+					"Description": "記事閲覧数の累計",
+					"Unit": "",
+					"Data": {
+						"DataPoints": [
+							{
+								"Attributes": [
+									{
+										"Key": "article_id",
+										"Value": {
+											"Type": "STRING",
+											"Value": "article-123"
+										}
+									},
+									{
+										"Key": "category_id",
+										"Value": {
+											"Type": "STRING",
+											"Value": "general"
+										}
+									}
+								],
+								"StartTime": "2026-02-08T01:07:16.958262+09:00",
+								"Time": "2026-02-08T01:09:16.959275+09:00",
+								"Value": 1,
+								"Exemplars": [
+									{
+										"FilteredAttributes": null,
+										"Time": "2026-02-08T01:07:25.215753+09:00",
+										"Value": 1,
+										"SpanID": "fneOqmRHwh0=",
+										"TraceID": "XefTLN87D/4ZYWLi2xSS3g=="
+									}
+								]
+							}
+						],
+						"Temporality": "CumulativeTemporality",
+						"IsMonotonic": true
+					}
+				},
+				{
+					"Name": "article.active.count",
+					"Description": "公開中の記事数",
+					"Unit": "",
+					"Data": {
+						"DataPoints": [
+							{
+								"Attributes": [],
+								"StartTime": "2026-02-08T01:07:16.958287+09:00",
+								"Time": "2026-02-08T01:09:16.95929+09:00",
+								"Value": 0
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"Scope": {
+				"Name": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+				"Version": "0.65.0",
+				"SchemaURL": "",
+				"Attributes": null
+			},
+			"Metrics": [
+				{
+					"Name": "http.server.request.body.size",
+					"Description": "Size of HTTP server request bodies.",
+					"Unit": "By",
+					"Data": {
+						"DataPoints": [
+							{
+								"Attributes": [
+									{
+										"Key": "http.request.method",
+										"Value": {
+											"Type": "STRING",
+											"Value": "GET"
+										}
+									},
+									{
+										"Key": "http.response.status_code",
+										"Value": {
+											"Type": "INT64",
+											"Value": 200
+										}
+									},
+									{
+										"Key": "network.protocol.name",
+										"Value": {
+											"Type": "STRING",
+											"Value": "http"
+										}
+									},
+									{
+										"Key": "network.protocol.version",
+										"Value": {
+											"Type": "STRING",
+											"Value": "1.1"
+										}
+									},
+									{
+										"Key": "server.address",
+										"Value": {
+											"Type": "STRING",
+											"Value": "localhost"
+										}
+									},
+									{
+										"Key": "server.port",
+										"Value": {
+											"Type": "INT64",
+											"Value": 8080
+										}
+									},
+									{
+										"Key": "url.scheme",
+										"Value": {
+											"Type": "STRING",
+											"Value": "http"
+										}
+									}
+								],
+								"StartTime": "2026-02-08T01:07:16.9588+09:00",
+								"Time": "2026-02-08T01:09:16.959294+09:00",
+								"Count": 1,
+								"Bounds": [
+									0,
+									5,
+									10,
+									25,
+									50,
+									75,
+									100,
+									250,
+									500,
+									750,
+									1000,
+									2500,
+									5000,
+									7500,
+									10000
+								],
+								"BucketCounts": [
+									1,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0
+								],
+								"Min": 0,
+								"Max": 0,
+								"Sum": 0,
+								"Exemplars": [
+									{
+										"FilteredAttributes": null,
+										"Time": "2026-02-08T01:07:25.215951+09:00",
+										"Value": 0,
+										"SpanID": "wNalWDC8j+w=",
+										"TraceID": "XefTLN87D/4ZYWLi2xSS3g=="
+									}
+								]
+							}
+						],
+						"Temporality": "CumulativeTemporality"
+					}
+				},
+				{
+					"Name": "http.server.response.body.size",
+					"Description": "Size of HTTP server response bodies.",
+					"Unit": "By",
+					"Data": {
+						"DataPoints": [
+							{
+								"Attributes": [
+									{
+										"Key": "http.request.method",
+										"Value": {
+											"Type": "STRING",
+											"Value": "GET"
+										}
+									},
+									{
+										"Key": "http.response.status_code",
+										"Value": {
+											"Type": "INT64",
+											"Value": 200
+										}
+									},
+									{
+										"Key": "network.protocol.name",
+										"Value": {
+											"Type": "STRING",
+											"Value": "http"
+										}
+									},
+									{
+										"Key": "network.protocol.version",
+										"Value": {
+											"Type": "STRING",
+											"Value": "1.1"
+										}
+									},
+									{
+										"Key": "server.address",
+										"Value": {
+											"Type": "STRING",
+											"Value": "localhost"
+										}
+									},
+									{
+										"Key": "server.port",
+										"Value": {
+											"Type": "INT64",
+											"Value": 8080
+										}
+									},
+									{
+										"Key": "url.scheme",
+										"Value": {
+											"Type": "STRING",
+											"Value": "http"
+										}
+									}
+								],
+								"StartTime": "2026-02-08T01:07:16.958809+09:00",
+								"Time": "2026-02-08T01:09:16.959323+09:00",
+								"Count": 1,
+								"Bounds": [
+									0,
+									5,
+									10,
+									25,
+									50,
+									75,
+									100,
+									250,
+									500,
+									750,
+									1000,
+									2500,
+									5000,
+									7500,
+									10000
+								],
+								"BucketCounts": [
+									0,
+									0,
+									0,
+									0,
+									0,
+									1,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0
+								],
+								"Min": 71,
+								"Max": 71,
+								"Sum": 71,
+								"Exemplars": [
+									{
+										"FilteredAttributes": null,
+										"Time": "2026-02-08T01:07:25.215952+09:00",
+										"Value": 71,
+										"SpanID": "wNalWDC8j+w=",
+										"TraceID": "XefTLN87D/4ZYWLi2xSS3g=="
+									}
+								]
+							}
+						],
+						"Temporality": "CumulativeTemporality"
+					}
+				},
+				{
+					"Name": "http.server.request.duration",
+					"Description": "Duration of HTTP server requests.",
+					"Unit": "s",
+					"Data": {
+						"DataPoints": [
+							{
+								"Attributes": [
+									{
+										"Key": "http.request.method",
+										"Value": {
+											"Type": "STRING",
+											"Value": "GET"
+										}
+									},
+									{
+										"Key": "http.response.status_code",
+										"Value": {
+											"Type": "INT64",
+											"Value": 200
+										}
+									},
+									{
+										"Key": "network.protocol.name",
+										"Value": {
+											"Type": "STRING",
+											"Value": "http"
+										}
+									},
+									{
+										"Key": "network.protocol.version",
+										"Value": {
+											"Type": "STRING",
+											"Value": "1.1"
+										}
+									},
+									{
+										"Key": "server.address",
+										"Value": {
+											"Type": "STRING",
+											"Value": "localhost"
+										}
+									},
+									{
+										"Key": "server.port",
+										"Value": {
+											"Type": "INT64",
+											"Value": 8080
+										}
+									},
+									{
+										"Key": "url.scheme",
+										"Value": {
+											"Type": "STRING",
+											"Value": "http"
+										}
+									}
+								],
+								"StartTime": "2026-02-08T01:07:16.958813+09:00",
+								"Time": "2026-02-08T01:09:16.959327+09:00",
+								"Count": 1,
+								"Bounds": [
+									0.005,
+									0.01,
+									0.025,
+									0.05,
+									0.075,
+									0.1,
+									0.25,
+									0.5,
+									0.75,
+									1,
+									2.5,
+									5,
+									7.5,
+									10
+								],
+								"BucketCounts": [
+									1,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0,
+									0
+								],
+								"Min": 0.00038337500000000004,
+								"Max": 0.00038337500000000004,
+								"Sum": 0.00038337500000000004,
+								"Exemplars": [
+									{
+										"FilteredAttributes": null,
+										"Time": "2026-02-08T01:07:25.21596+09:00",
+										"Value": 0.00038337500000000004,
+										"SpanID": "wNalWDC8j+w=",
+										"TraceID": "XefTLN87D/4ZYWLi2xSS3g=="
+									}
+								]
+							}
+						],
+						"Temporality": "CumulativeTemporality"
+					}
+				}
+			]
+		}
+	]
+}
