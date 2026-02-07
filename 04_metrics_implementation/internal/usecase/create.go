@@ -30,6 +30,12 @@ func (i *CreateArticleInput) Validate() error {
 
 // Create は記事を作成する (イベント記録の例)
 func (u *articleUsecase) Create(ctx context.Context, input *CreateArticleInput) (*entity.Article, error) {
+	// NOTE: Histogram (article.create.duration) の計測開始地点。
+	// Histogram は値の分布を記録するメトリクスで、Record() に渡された値が事前に定義したバケット境界 (0.1, 0.5, 1, 2, 5秒) に振り分けられる。
+	// 例: 0.3秒 → [0.1, 0.5) バケットに加算、2.1秒 → [2, 5) バケットに加算。
+	// これにより「リクエストの何%が0.5秒以内に完了したか」等の分布分析が可能になる。
+	// 成功・バリデーションエラー・DBエラーの全パスで status 属性付きで記録するため、関数冒頭で startTime を取得し、各 return 直前で Record() を呼ぶ。
+
 	startTime := time.Now()
 
 	ctx, span := tracer.Start(ctx, "ArticleUsecase.Create")
@@ -42,7 +48,7 @@ func (u *articleUsecase) Create(ctx context.Context, input *CreateArticleInput) 
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "validation failed")
 
-		// NOTE: メトリクス: バリデーションエラー時の処理時間を記録
+		// NOTE: Histogram 記録: バリデーションエラー時の処理時間
 		articleCreateDuration.Record(ctx, time.Since(startTime).Seconds(),
 			metric.WithAttributes(attribute.String("status", "validation_error")),
 		)
@@ -64,7 +70,7 @@ func (u *articleUsecase) Create(ctx context.Context, input *CreateArticleInput) 
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 
-		// NOTE: メトリクス: DBエラー時の処理時間を記録
+		// NOTE: Histogram 記録: DBエラー時の処理時間
 		articleCreateDuration.Record(ctx, time.Since(startTime).Seconds(),
 			metric.WithAttributes(attribute.String("status", "error")),
 		)
@@ -76,7 +82,7 @@ func (u *articleUsecase) Create(ctx context.Context, input *CreateArticleInput) 
 		attribute.String("article.id", created.ID),
 	))
 
-	// NOTE: メトリクス: 成功時の処理時間を記録
+	// NOTE: Histogram 記録: 成功時の処理時間
 	articleCreateDuration.Record(ctx, time.Since(startTime).Seconds(),
 		metric.WithAttributes(attribute.String("status", "success")),
 	)

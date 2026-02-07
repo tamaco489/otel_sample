@@ -20,21 +20,33 @@ type Provider struct {
 }
 ```
 
-### 2. `internal/usecase/metrics.go` (新規)
+### 2. `internal/entity/article.go` (新規)
 
-パッケージレベルで `meter` とメトリクス計器を定義。
+`Article` 構造体を repository パッケージから分離し、専用の entity パッケージに配置。
 
-### 3. `internal/usecase/get_by_id.go` (変更)
+### 3. `internal/usecase/telemetry.go` (新規)
+
+パッケージレベルで `tracer`・`meter` と、Counter・Histogram のメトリクス計器変数を宣言。
+
+### 4. `internal/usecase/interface.go` (変更)
+
+`NewArticleUsecase()` で Counter・Histogram・Observable Gauge の3つのメトリクス計器を初期化。Observable Gauge は `ArticleRepository` インターフェース経由でコールバックから公開記事数を取得する。
+
+### 5. `internal/usecase/get_by_id.go` (変更)
 
 記事取得成功時に `article.views.total` Counter をインクリメント。
 
-### 4. `internal/usecase/create.go` (変更)
+### 6. `internal/usecase/create.go` (変更)
 
 記事作成の処理時間を `article.create.duration` Histogram に記録。成功・バリデーションエラー・DBエラーの全パスで `status` 属性付きで記録。
 
-### 5. `internal/repository/repository.go` / `create.go` (変更)
+### 7. `internal/repository/interface.go` (変更)
 
-`publishedCount` (`atomic.Int64`) を導入し、記事作成成功時にインクリメント。Observable Gauge のコールバックで参照される。
+`ArticleRepository` インターフェースに `GetPublishedCount()` メソッドを追加。Observable Gauge のコールバックから利用される。
+
+### 8. `internal/repository/repository.go` / `create.go` (変更)
+
+`publishedCount` (`atomic.Int64`) を導入し、記事作成成功時にインクリメント。`GetPublishedCount()` メソッドで値を返す。
 
 ## メトリクスの種類
 
@@ -66,8 +78,8 @@ articleCreateDuration.Record(ctx, duration, metric.WithAttributes(...))
 
 ```go
 meter.Int64ObservableGauge("article.active.count",
-    metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
-        o.Observe(repository.GetPublishedCount())
+    metric.WithInt64Callback(func(ctx context.Context, o metric.Int64Observer) error {
+        o.Observe(repo.GetPublishedCount(ctx)) // ArticleRepository インターフェース経由
         return nil
     }),
 )
