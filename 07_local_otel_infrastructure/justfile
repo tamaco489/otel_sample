@@ -1,0 +1,59 @@
+# デフォルトレシピ: 利用可能なコマンド一覧を表示
+default:
+    @just --list
+
+# 全サービスをバックグラウンドで起動
+up:
+    docker compose up -d
+
+# 全サービスをフォアグラウンドで起動 (ログをリアルタイム表示)
+up-fg:
+    docker compose up
+
+# 全サービスを停止
+stop:
+    docker compose stop
+
+# 全サービスを停止しコンテナを削除 (ボリュームは保持)
+down:
+    docker compose down
+
+# 全サービスを停止しコンテナとボリュームを完全削除
+destroy:
+    docker compose down -v
+
+# 全サービスを再起動
+restart:
+    docker compose restart
+
+# 指定サービスを再起動 (例: just restart-svc alloy)
+restart-svc service:
+    docker compose restart {{ service }}
+
+# コンテナの稼働状態を表示
+ps:
+    docker compose ps
+
+# 全サービスのログを表示 (直近100行 + フォロー)
+logs:
+    docker compose logs -f --tail 100
+
+# 指定サービスのログを表示 (例: just logs-svc alloy)
+logs-svc service:
+    docker compose logs -f --tail 100 {{ service }}
+
+# Grafana UI を開く
+open-grafana:
+    open http://localhost:3000
+
+# Prometheus UI を開く
+open-prometheus:
+    open http://localhost:9090
+
+# Alloy Debug UI を開く
+open-alloy:
+    open http://localhost:12345
+
+# YAML 構文チェック
+validate:
+    docker compose config --quiet
