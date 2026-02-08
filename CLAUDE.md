@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code
+(claude.ai/code) when working with code in this repository.
 
 ## プロジェクト概要
 
@@ -24,14 +25,16 @@ cd <サンプル名> && go build ./cmd/main.go && go vet ./...
 
 段階的に機能を追加する構成:
 
-- **01_start_otel**: 基本的な OTEL セットアップ (Exporter → Resource → TracerProvider → Tracer → Spans)
+- **01_start_otel**: 基本的な OTEL セットアップ
+  (Exporter → Resource → TracerProvider → Tracer → Spans)
 - **02_instrumentation**: レイヤードアーキテクチャと手動スパン計装を含む HTTP API
 - **03_slog_otel_integration**: slog + OTEL 統合。ログに trace_id / span_id を自動付与
-- **04_metrics_implementation**: MeterProvider + Counter / Histogram / Observable Gauge によるメトリクス計装
+- **04_metrics_implementation**: MeterProvider +
+  Counter / Histogram / Observable Gauge によるメトリクス計装
 
 ## アーキテクチャ (02〜04 共通)
 
-```
+```text
 main → di → controller → handler → usecase → repository
 ```
 
@@ -43,7 +46,7 @@ main → di → controller → handler → usecase → repository
 
 ## 主要ディレクトリ構成 (02〜04 共通)
 
-```
+```text
 <サンプル名>/
 ├── cmd/main.go                     # エントリポイント
 ├── internal/
