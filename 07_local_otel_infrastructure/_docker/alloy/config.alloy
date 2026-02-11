@@ -1,0 +1,131 @@
+// ==========================================================
+// OTLP 受信 (トレース・メトリクス)
+// ==========================================================
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces  = [otelcol.processor.batch.default.input]
+    metrics = [otelcol.processor.batch.default.input]
+  }
+}
+
+// ==========================================================
+// バッチ処理
+// ==========================================================
+otelcol.processor.batch "default" {
+  timeout          = "5s"
+  send_batch_size  = 1024
+
+  output {
+    traces  = [otelcol.exporter.otlp.tempo.input]
+    metrics = [otelcol.exporter.prometheus.default.input]
+  }
+}
+
+// ==========================================================
+// トレース → Tempo へ転送
+// ==========================================================
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// ==========================================================
+// メトリクス → Prometheus 形式でエクスポート
+// ==========================================================
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+// ==========================================================
+// Docker コンテナの自動検出
+// ==========================================================
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+// ==========================================================
+// リラベリング: コンテナメタデータをラベルに変換
+// ==========================================================
+discovery.relabel "docker_logs" {
+  targets = []
+
+  // Alloy 自身のログを除外し、自己収集ループを防止
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "alloy"
+    action        = "drop"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+// ==========================================================
+// ログ処理パイプライン: JSON パース → ラベル抽出
+// ==========================================================
+loki.process "docker_logs" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.docker {}
+
+  stage.json {
+    expressions = {
+      trace_id = "trace_id",
+      span_id  = "span_id",
+      level    = "level",
+    }
+  }
+
+  stage.labels {
+    values = {
+      trace_id = "",
+      span_id  = "",
+      level    = "",
+    }
+  }
+}
+
+// ==========================================================
+// Docker コンテナからログを収集
+// ==========================================================
+loki.source.docker "default" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.docker_logs.rules
+  forward_to    = [loki.process.docker_logs.receiver]
+}
+
+// ==========================================================
+// Loki への書き込み
+// ==========================================================
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
