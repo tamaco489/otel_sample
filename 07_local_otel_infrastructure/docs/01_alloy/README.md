@@ -98,33 +98,45 @@ OTLP メトリクスを Prometheus 形式に変換し、Remote Write API (`http:
 
 ### パイプライン 2: コンテナログ
 
-#### `discovery.docker "containers"`
+このパイプラインは 2 段階で構成されている。前半はコンテナの**検出とフィルタリング** (Alloy 側の処理)、後半は収集したログの**パース・ラベル付与・Loki への送信** (Loki 連携の処理) を担う。
 
-Docker ソケットに接続し、5 秒間隔で稼働中のコンテナを自動検出する。
+#### 前半: コンテナ検出・フィルタリング
+
+##### `discovery.docker "containers"`
+
+Docker ソケットに接続し、稼働中のコンテナを自動検出する。
 
 **なぜ自動検出するのか:** コンテナ名やポートを設定ファイルにハードコードすると、コンテナの追加・削除のたびに設定変更が必要になる。Docker ソケット経由の自動検出なら、新しいコンテナが起動すれば自動的にログ収集が始まる。
 
-#### `discovery.relabel "docker_logs"`
+##### `discovery.relabel "docker_logs"`
 
-コンテナのメタデータを加工する。
+コンテナのメタデータを 3 つの rule で順番に加工する。
 
-| ルール                                                                 | 目的                                              |
-| ---------------------------------------------------------------------- | ------------------------------------------------- |
-| `alloy` サービスを除外                                                 | Alloy 自身のログ収集を防止 (無限ループ回避)       |
-| `__meta_docker_container_name` → `container`                           | コンテナ名を `container` ラベルにマッピング       |
-| `__meta_docker_container_label_com_docker_compose_service` → `service` | Compose サービス名を `service` ラベルにマッピング |
+| rule | ルール                                                                 | 目的                                                                                                                   |
+| ---- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1    | `alloy` サービスを除外                                                 | Alloy 自身のログ収集を防止 (無限ループ回避)                                                                            |
+| 2    | `__meta_docker_container_name` → `container`                           | コンテナ名の先頭 `/` を除去して `container` ラベルに格納                                                               |
+| 3    | `__meta_docker_container_label_com_docker_compose_service` → `service` | Compose サービス名をそのまま `service` ラベルに格納 (`regex` 省略時はデフォルト `(.*)` のため値がそのままコピーされる) |
 
-**なぜ Alloy 自身を除外するのか:** Alloy がログを収集 → そのログ出力を Alloy が再度収集 → 再びログが出力される...という無限ループが発生するため。
+**なぜ Alloy 自身を除外するのか (rule 1):** Alloy がログを収集 → そのログ出力を Alloy が再度収集 → 再びログが出力される...という無限ループが発生するため。
 
-**なぜラベルをマッピングするのか:** Docker のメタデータキー (`__meta_docker_container_name` 等) はそのままでは Loki のラベルとして使えない。`container` や `service` のような短い名前に変換することで、Grafana 上で `{service="article-server"}` のように直感的にフィルタリングできるようになる。
+**なぜラベルをマッピングするのか (rule 2, 3):** `__` (アンダースコア 2 つ) で始まるラベルは Prometheus / Loki の内部ラベルであり、データ保存時に自動的に破棄される。そのため `__meta_docker_container_name` 等の値を Loki に残すには、`container` や `service` のような `__` なしのラベルに変換する必要がある。これにより Grafana 上で `{service="article-server"}` のようにフィルタリングできるようになる。
 
-#### `loki.source.docker "default"`
+#### 後半: ログ収集・パース・Loki 送信
+
+ここからは Loki へログを送るための処理。検出されたコンテナからログを読み取り、JSON パースでフィールドを抽出し、Loki のラベルとして付与してから送信する。
+
+##### `loki.source.docker "default"`
 
 Docker ソケット経由で検出されたコンテナからログを読み取り、処理ステージへ渡す。
 
-#### `loki.process "docker_logs"`
+##### `loki.process "docker_logs"`
 
-ログ行を JSON としてパースし、フィールドを Loki ラベルに昇格させる。
+ログ行を 3 つのステージで順番に処理する。
+
+1. **`stage.docker`** — Docker のログラッパー (timestamp, stream 等) を除去し、アプリの出力本文を取り出す
+2. **`stage.json`** — 本文を JSON パースし、指定したキーの値を一時変数に抽出する
+3. **`stage.labels`** — 一時変数の値を Loki のラベルに昇格させる (`""` は同名の一時変数をそのまま使う意味)
 
 | 抽出フィールド | 目的                                           |
 | -------------- | ---------------------------------------------- |
@@ -137,7 +149,9 @@ Docker ソケット経由で検出されたコンテナからログを読み取�
 - `trace_id` / `span_id`: Grafana の Tempo ↔ Loki 連携のキーとなるフィールド。これをラベルに昇格させることで、トレース画面から「このスパンに対応するログ」を即座に表示できる。03_slog_otel_integration で slog に trace_id / span_id を埋め込む実装をしているのは、ここで活用するため
 - `level`: `{level="error"}` のようにクエリできるようにすることで、障害調査時にエラーログだけを素早く絞り込める
 
-#### `loki.write "default"`
+**なぜ `stage.json` と `stage.labels` が分かれているのか:** `stage.json` は値の抽出のみ、`stage.labels` でラベルとして確定させる設計。間に加工ステージを挟めるようにするため 2 段階になっている。
+
+##### `loki.write "default"`
 
 加工済みログを `http://loki:3100/loki/api/v1/push` へ送信する。
 

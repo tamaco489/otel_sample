@@ -1,14 +1,16 @@
 // ==========================================================
 // OTLP 受信 (トレース・メトリクス)
 // ==========================================================
+// アプリから送られる OTLP テレメトリデータの受け口 (gRPC / HTTP の 2 プロトコルで待ち受け、受信データをバッチ処理へ渡す)
 otelcol.receiver.otlp "default" {
   grpc {
-    endpoint = "0.0.0.0:4317"
+    endpoint = "0.0.0.0:4317" // Go SDK がデフォルトで使うプロトコル
   }
   http {
-    endpoint = "0.0.0.0:4318"
+    endpoint = "0.0.0.0:4318" // gRPC が使えない環境 (ブラウザ等) 向けの代替
   }
 
+  // トレース・メトリクスとも同じ batch プロセッサへ渡し、その先で Tempo / Prometheus に振り分けられる
   output {
     traces  = [otelcol.processor.batch.default.input]
     metrics = [otelcol.processor.batch.default.input]
@@ -18,35 +20,40 @@ otelcol.receiver.otlp "default" {
 // ==========================================================
 // バッチ処理
 // ==========================================================
+// テレメトリデータをバッファリングし、まとめて送信することでリクエスト回数を削減する (timeout か send_batch_size のどちらか先に満たした条件でフラッシュされる)
 otelcol.processor.batch "default" {
-  timeout          = "5s"
-  send_batch_size  = 1024
+  timeout          = "5s"   // 5 秒経過でフラッシュ
+  send_batch_size  = 1024   // 1024 件蓄積でフラッシュ
 
+  // データの種類ごとに送信先を振り分ける
   output {
-    traces  = [otelcol.exporter.otlp.tempo.input]
-    metrics = [otelcol.exporter.prometheus.default.input]
+    traces  = [otelcol.exporter.otlp.tempo.input]         // トレース -> Tempo
+    metrics = [otelcol.exporter.prometheus.default.input] // メトリクス -> Prometheus
   }
 }
 
 // ==========================================================
-// トレース → Tempo へ転送
+// トレース -> Tempo へ転送
 // ==========================================================
+// Tempo は OTLP をネイティブに受信できるため、形式変換なしでそのまま gRPC 転送する (Prometheus 向けとは異なり exporter.prometheus のような変換ブロックは不要)
 otelcol.exporter.otlp "tempo" {
   client {
     endpoint = "tempo:4317"
     tls {
-      insecure = true
+      insecure = true // Docker 内部ネットワークのため TLS を省略 (本番環境では TLS 有効化を推奨)
     }
   }
 }
 
 // ==========================================================
-// メトリクス → Prometheus 形式でエクスポート
+// メトリクス -> Prometheus 形式でエクスポート
 // ==========================================================
+// OTLP メトリクスを Prometheus 形式に変換し、prometheus.remote_write へ渡す (このブロック自体は変換のみを行い、送信は forward_to 先が担う)
 otelcol.exporter.prometheus "default" {
   forward_to = [prometheus.remote_write.default.receiver]
 }
 
+// Prometheus 側で --web.enable-remote-write-receiver を有効にすることでこのエンドポイントへの書き込みが受け付けられる (デフォルトでは無効)
 prometheus.remote_write "default" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
@@ -56,30 +63,34 @@ prometheus.remote_write "default" {
 // ==========================================================
 // Docker コンテナの自動検出
 // ==========================================================
+// Docker ソケット経由で稼働中のコンテナを自動検出する (検出結果は discovery.docker.containers.targets として他ブロックから参照される)
 discovery.docker "containers" {
-  host             = "unix:///var/run/docker.sock"
-  refresh_interval = "5s"
+  host             = "unix:///var/run/docker.sock" // Docker デーモンとの通信に使うソケットパス
+  refresh_interval = "20s"                         // 20 秒ごとにコンテナ一覧を再取得
 }
 
 // ==========================================================
 // リラベリング: コンテナメタデータをラベルに変換
 // ==========================================================
 discovery.relabel "docker_logs" {
+  // 構文上必須のため空配列を指定 (実際のターゲットは loki.source.docker 側で discovery.docker.containers.targets から渡される)
   targets = []
 
-  // Alloy 自身のログを除外し、自己収集ループを防止
+  // 1. Alloy 自身のログを収集すると無限ループになるため除外
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
     regex         = "alloy"
     action        = "drop"
   }
 
+  // 2. Docker のコンテナ名を参照し、先頭の「/」を除去し、残りの部分をキャプチャ
   rule {
     source_labels = ["__meta_docker_container_name"]
     regex         = "/(.*)"
     target_label  = "container"
   }
 
+  // 3. docker-compose の service 名 (e.g. article-server) を参照し、そのまま設定 ※ regex 省略時はデフォルトで (.*) (全体一致) なため、値がそのままコピーされる
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
     target_label  = "service"
@@ -87,13 +98,28 @@ discovery.relabel "docker_logs" {
 }
 
 // ==========================================================
-// ログ処理パイプライン: JSON パース → ラベル抽出
+// Docker コンテナからログを収集
 // ==========================================================
+// 検出されたコンテナからログを読み取り、relabel ルール適用後に loki.process へ渡す
+loki.source.docker "default" {
+  host          = "unix:///var/run/docker.sock"            // Docker デーモンとの通信に使うソケットパス
+  targets       = discovery.docker.containers.targets      // 自動検出されたコンテナ一覧を参照
+  relabel_rules = discovery.relabel.docker_logs.rules      // ラベル変換・フィルタリングルールを適用
+  forward_to    = [loki.process.docker_logs.receiver]      // 読み取ったログを処理パイプラインへ渡す
+}
+
+// ==========================================================
+// ログ処理パイプライン: JSON パース -> ラベル抽出
+// ==========================================================
+// ログ行を 3 ステージで順番に処理し、加工済みログを loki.write へ渡す
 loki.process "docker_logs" {
+  // 加工済みログを loki.write へ渡し、最終的に Loki へ送信される
   forward_to = [loki.write.default.receiver]
 
+  // 1. Docker のログラッパー (stream, timestamp 等) を除去し、アプリの出力本文を取り出す
   stage.docker {}
 
+  // 2. 本文を JSON パースし、指定したキーの値を一時変数に抽出する (この時点ではまだラベルではない)
   stage.json {
     expressions = {
       trace_id = "trace_id",
@@ -102,6 +128,7 @@ loki.process "docker_logs" {
     }
   }
 
+  // 3. 一時変数の値を Loki のラベルに昇格させる ("" は同名の一時変数をそのまま使う意味)
   stage.labels {
     values = {
       trace_id = "",
@@ -112,18 +139,9 @@ loki.process "docker_logs" {
 }
 
 // ==========================================================
-// Docker コンテナからログを収集
-// ==========================================================
-loki.source.docker "default" {
-  host          = "unix:///var/run/docker.sock"
-  targets       = discovery.docker.containers.targets
-  relabel_rules = discovery.relabel.docker_logs.rules
-  forward_to    = [loki.process.docker_logs.receiver]
-}
-
-// ==========================================================
 // Loki への書き込み
 // ==========================================================
+// 加工済みログを Loki へ送信する (Loki のデフォルトの push API エンドポイント)
 loki.write "default" {
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"

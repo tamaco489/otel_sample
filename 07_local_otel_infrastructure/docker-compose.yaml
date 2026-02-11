@@ -1,5 +1,4 @@
 services:
-
   # アプリケーションサーバー (Go): OTLP でテレメトリを送信
   # article-server:
   #   build:
@@ -21,7 +20,7 @@ services:
 
   # テレメトリ収集・ログ転送を統合する OpenTelemetry ディストリビューション
   alloy:
-    image: grafana/alloy:v1.8.3
+    image: grafana/alloy:v1.13.0
     command:
       - run
       - --server.http.listen-addr=0.0.0.0:12345
@@ -31,9 +30,9 @@ services:
       - ./_docker/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "4317:4317"
-      - "4318:4318"
-      - "12345:12345"
+      - "4317:4317" # OTLP gRPC 受信 (アプリからトレース・メトリクスを受け取る)
+      - "4318:4318" # OTLP HTTP 受信 (gRPC が使えない環境向けの代替)
+      - "12345:12345" # Alloy 管理 UI (パイプラインの状態をブラウザで確認)
     depends_on:
       tempo:
         condition: service_started
@@ -41,6 +40,9 @@ services:
         condition: service_started
       loki:
         condition: service_started
+    # ログを JSON 形式でファイル保存し、1 ファイル 10MB x 最大 3 ファイル (= 30MB) でローテーション
+    # 未設定の場合、コンテナを長時間起動していた際にログが無制限に増えてディスクを圧迫するため。
+    # Alloy の stage.docker はこの json-file ドライバの出力をパースする
     logging:
       driver: json-file
       options:
@@ -68,7 +70,7 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
-      - "--web.enable-remote-write-receiver"
+      - "--web.enable-remote-write-receiver" # Alloy からの Remote Write (/api/v1/write) を受け付けるために必要。デフォルトでは無効
     volumes:
       - ./_docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
