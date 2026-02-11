@@ -1,9 +1,18 @@
 global:
+  # ターゲットからメトリクスを取得する間隔 (Prometheus のデフォルト値)
   scrape_interval: 15s
+
+  # アラートルールの評価間隔 (この構成では未使用だが global の必須フィールド)
   evaluation_interval: 15s
 
+# Prometheus が能動的にメトリクスを取りに行く (pull 型) ターゲットの定義
+# アプリケーションのメトリクスは Alloy の Remote Write (push型) で別途受信しているためここには含まれない (スクレイプしない)
+# テレメトリパイプラインの健全性監視が目的としているため、スクレイプ対象は Alloy 自身のヘルスメトリクスのみ
 scrape_configs:
+  # スクレイプジョブの名称、収集した全てのメトリクスに job="alloy" ラベルが付与される
+  # Grafana で {job="alloy"} とクエリすることでこのジョブ経由のメトリクスのみを抽出可能
   - job_name: alloy
     static_configs:
       - targets:
+          # Alloy の管理エンドポイント。Alloy 自身の内部メトリクス (処理スパン数、エラー率等) を収集する
           - alloy:12345

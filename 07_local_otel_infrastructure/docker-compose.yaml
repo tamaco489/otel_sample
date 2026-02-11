@@ -56,7 +56,8 @@ services:
       - ./_docker/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo-data:/var/tempo # トレースデータ (WAL + ブロック) の永続化
     ports:
-      - "3200:3200" # Grafana (ブラウザ) でトレースの検索・取得を行う際に必要 ※4317 (gRPC 受信) は内部通信のみのためホストに公開しない
+      # Grafana (ブラウザ) でトレースの検索・取得を行う際に必要 ※4317 (gRPC 受信) は内部通信のみのためホストに公開しない
+      - "3200:3200"
     logging:
       driver: json-file
       options:
@@ -64,16 +65,19 @@ services:
         max-file: "3"
 
   # メトリクスの収集・保存・クエリエンジン
+  # アプリケーション: Alloy で Prometheus 形式に変換 -> Remote Write (メトリクス書き込み) -> Prometheus で受信しTSDB に保存
+  # ブラウザ: Grafana で PromQL クエリ -> Prometheus で応答し TSDB から読み出し -> Grafana で可視化
   prometheus:
-    image: prom/prometheus:v3.2.1
+    image: prom/prometheus:v3.9.1
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.enable-remote-write-receiver" # Alloy からの Remote Write (/api/v1/write) を受け付けるために必要。デフォルトでは無効
+      - "--storage.tsdb.path=/prometheus" # メトリクスデータ (TSDB) の保存先
+      - "--web.enable-remote-write-receiver" # Alloy からの Remote Write (/api/v1/write) を受け付けるために必要 (デフォルトは無効)
     volumes:
       - ./_docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
+      - prometheus-data:/prometheus # メトリクスデータの永続化
     ports:
+      # アプリケーション、ブラウザ共通のポートを使用
       - "9090:9090"
     logging:
       driver: json-file
