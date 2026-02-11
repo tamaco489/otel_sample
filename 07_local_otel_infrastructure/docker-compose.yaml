@@ -77,7 +77,7 @@ services:
       - ./_docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus # メトリクスデータの永続化
     ports:
-      # アプリケーション、ブラウザ共通のポートを使用
+      # Alloy からのメトリクス書き込み (Remote Write) / Grafana からのメトリクスクエリ (PromQL) 共通ポート
       - "9090:9090"
     logging:
       driver: json-file
@@ -86,13 +86,16 @@ services:
         max-file: "3"
 
   # ログの集約・インデックス・クエリエンジン
+  # アプリケーション: Alloy がコンテナログを収集・JSON パース・ラベル付与 -> Loki の push API に書き込み -> chunk 化して保存
+  # ブラウザ: Grafana で LogQL クエリ -> Loki でインデックス + chunk から検索 -> Grafana で可視化
   loki:
-    image: grafana/loki:3.4.2
+    image: grafana/loki:3.6.5
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes:
       - ./_docker/loki/loki.yaml:/etc/loki/loki.yaml:ro
-      - loki-data:/loki
+      - loki-data:/loki # ログデータ (chunk + index) の永続化
     ports:
+      # Alloy からのログ書き込み (push API) / Grafana からのログクエリ (LogQL) 共通ポート
       - "3100:3100"
     logging:
       driver: json-file

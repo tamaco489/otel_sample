@@ -1,25 +1,58 @@
+# マルチテナント認証を無効化 (有効の場合、全リクエストに X-Scope-OrgID ヘッダーが必要になるため)
 auth_enabled: false
 
+# HTTP サーバー設定
 server:
+  # Loki の HTTP API ポート (Alloy からのログ書き込みと Grafana からのクエリを受け付ける)
   http_listen_port: 3100
 
+# ストレージ・レプリケーション・ハッシュリングの共通設定
 common:
+  # Loki の全データのベースディレクトリ
   path_prefix: /loki
+  # ログデータの保存先設定
   storage:
     filesystem:
+      # 圧縮された log chunk の保存先 (1つの chunk には同じラベルセットを持つ一定時間分のログが集約される)
       chunks_directory: /loki/chunks
+
+      # アラート/レコーディングルールの保存先 (今回の構成では未使用)
       rules_directory: /loki/rules
+
+  # 単一インスタンスの開発環境のためレプリケーションによる冗長化は不要
   replication_factor: 1
+
+  # ハッシュリングの設定 (分散構成でどのインスタンスがどのデータを担当するか管理する仕組み)
   ring:
     kvstore:
+      # 単一インスタンスでは自身の情報を保持するだけなため、永続化が不要な in-memory ストアを使用
+      # 分散構成では consul や etcd を使用して複数インスタンス間での共有する構成を推奨
       store: inmemory
 
+# ログのインデックスと保存方法の定義
 schema_config:
   configs:
-    - from: "2024-01-01"
-      store: tsdb
-      object_store: filesystem
+    # この日付以降の全ログにこのスキーマを適用
+    - from: "2026-02-01"
+
+      # tsdb ストアに必須の最新スキーマバージョン
+      # DOC: https://grafana.com/docs/loki/latest/release-notes/v3-0/
+      # NOTE: 公式で、Loki 3.x では v13 + tsdb ストアの組み合わせが推奨されている
       schema: v13
+
+      # Loki 3.x 推奨のインデックスストア (旧来の boltdb-shipper より高性能)
+      store: tsdb
+
+      #  log chunk をローカルファイルシステムに保存 (本番環境では s3 や gcs の使用が推奨される)
+      object_store: filesystem
+
       index:
+        # インデックステーブル名のプレフィックス
         prefix: index_
+
+        # 24 時間ごとにインデックステーブルを分割 (古いログの削除をテーブル単位で効率的に行うため)
         period: 24h
+
+    # 追加のスキーマ設定例
+    # - from: "2027-01-01"
+    #   schema: v14
