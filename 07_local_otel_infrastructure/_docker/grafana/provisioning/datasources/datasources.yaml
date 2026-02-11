@@ -1,0 +1,75 @@
+# DOC: [Provision Grafana] https://grafana.com/docs/grafana/latest/administration/provisioning/
+# DOC: [Github Sample] https://github.com/grafana/grafana/blob/main/conf/provisioning/datasources/sample.yaml
+
+# プロビジョニング設定のバージョン (現時点では 1 のみ)
+apiVersion: 1
+
+datasources:
+  # ==================================================
+  # Trace
+  # ==================================================
+  # Grafana が Tempo にトレースクエリを投げるための接続設定
+  - name: Tempo
+    type: tempo
+    url: http://tempo:3200 # Tempo の HTTP API エンドポイント
+    uid: tempo # 他データソースから参照する際の一意な識別子
+
+    # 各種データソース (Tempo / Prometheus / Loki) は Docker 内部ネットワークにいるため、ブラウザから直接アクセスできない
+    # proxy にすることで Grafana コンテナが Docker 内部ネットワーク経由でリクエストを中継する
+    access: proxy
+
+    # Explore 画面でデフォルト選択されるデータソース (今回は trace を起点とした調査フローが主なユースケースであるため)
+    isDefault: true
+
+    # Tempo から他データソースへの相互参照設定
+    jsonData:
+      # trace -> log 連携: trace に対応する log を Loki から取得して表示可能にするための設定
+      tracesToLogs:
+        datasourceUid: loki
+        filterByTraceID: true # trace_id で log をフィルタリング
+        filterBySpanID: true # span_id で log をフィルタリング
+
+      # trace -> metrics 連携: trace のサービス名から関連する metrics を Prometheus で表示可能にするための設定
+      tracesToMetrics:
+        datasourceUid: prometheus
+
+      # サービス間の依存関係をノードグラフとして可視化する
+      nodeGraph:
+        enabled: true
+
+      # サービスマップ (サービス間の通信量・エラー率を可視化) のデータ取得先
+      # 描画にはトレースデータだけでは不足で、集約されたメトリクス (リクエスト数、エラー率、レイテンシ) が必要
+      # これらは Alloy 経由で Prometheus に書き込まれているため prometheus を指定する
+      serviceMap:
+        datasourceUid: prometheus
+
+  # ==================================================
+  # Metrics
+  # ==================================================
+  # Grafana が Prometheus に PromQL クエリを投げるための接続設定
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090 # Prometheus の HTTP API エンドポイント
+    uid: prometheus
+    access: proxy
+
+  # ==================================================
+  # Log
+  # ==================================================
+  # Grafana が Loki に LogQL クエリを投げるための接続設定
+  - name: Loki
+    type: loki
+    url: http://loki:3100 # Loki の HTTP API エンドポイント (LogQL クエリを実行)
+    uid: loki
+    access: proxy
+
+    # log -> trace 連携: log 内の trace_id から Tempo のトレース画面へジャンプ可能にするための設定
+    jsonData:
+      # derivedFields: ログ行の内容を正規表現でパースし、他データソースへのリンクを自動生成する機能
+      # Tempo 側の tracesToLogs (trace → log) の逆方向リンク (log → trace) をこれで実現している
+      derivedFields:
+        - datasourceUid: tempo
+          name: TraceID # フィールド名 (ログ行内に trace_id が含まれることを示す)
+          matcherRegex: "\"trace_id\":\"(\\w+)\"" # JSON log 内の trace_id の値を正規表現で抽出
+          url: "$${__value.raw}" # キャプチャした値をそのまま Tempo のクエリパラメータとして使用
+          urlDisplayLabel: View Trace # log 行に表示されるクリック可能なリンクテキスト

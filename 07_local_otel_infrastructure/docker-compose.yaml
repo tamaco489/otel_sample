@@ -1,0 +1,150 @@
+services:
+  # アプリケーションサーバー (Go): OTLP でテレメトリを送信
+  # article-server:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317
+  #     - OTEL_SERVICE_NAME=article-server
+  #   depends_on:
+  #     alloy:
+  #       condition: service_started
+  #   logging:
+  #     driver: json-file
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+
+  # テレメトリ収集・ログ転送を統合する OpenTelemetry ディストリビューション
+  # DOC: [Run Grafana Alloy in a Docker container] https://grafana.com/docs/alloy/latest/set-up/install/docker/
+  alloy:
+    image: grafana/alloy:v1.13.0
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./_docker/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "4317:4317" # OTLP gRPC 受信 (アプリからトレース・メトリクスを受け取る)
+      - "4318:4318" # OTLP HTTP 受信 (gRPC が使えない環境向けの代替)
+      - "12345:12345" # Alloy 管理 UI (パイプラインの状態をブラウザで確認)
+    depends_on:
+      tempo:
+        condition: service_started
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+    # ログを JSON 形式でファイル保存し、1 ファイル 10MB x 最大 3 ファイル (= 30MB) でローテーション
+    # 未設定の場合、コンテナを長時間起動していた際にログが無制限に増えてディスクを圧迫するため (Alloy の stage.docker はこの json-file ドライバの出力をパースする)
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 分散トレースのバックエンドストレージ
+  # DOC: [Github] https://github.com/grafana/intro-to-mltp/blob/main/docker-compose.yml
+  tempo:
+    image: grafana/tempo:2.10.0
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./_docker/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo # トレースデータ (WAL + ブロック) の永続化
+    ports:
+      # Grafana (ブラウザ) でトレースの検索・取得を行う際に必要 ※4317 (gRPC 受信) は内部通信のみのためホストに公開しない
+      - "3200:3200"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # メトリクスの収集・保存・クエリエンジン
+  # アプリケーション: Alloy で Prometheus 形式に変換 -> Remote Write (メトリクス書き込み) -> Prometheus で受信しTSDB に保存
+  # ブラウザ: Grafana で PromQL クエリ -> Prometheus で応答し TSDB から読み出し -> Grafana で可視化
+  # DOC: [Monitoring a Linux host with Prometheus, Node Exporter, and Docker Composes] https://grafana.com/docs/grafana-cloud/send-data/metrics/metrics-prometheus/prometheus-config-examples/docker-compose-linux/
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus" # メトリクスデータ (TSDB) の保存先
+      - "--web.enable-remote-write-receiver" # Alloy からの Remote Write (/api/v1/write) を受け付けるために必要 (デフォルトは無効)
+    volumes:
+      - ./_docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus # メトリクスデータの永続化
+    ports:
+      # Alloy からのメトリクス書き込み (Remote Write) / Grafana からのメトリクスクエリ (PromQL) 共通ポート
+      - "9090:9090"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ログの集約・インデックス・クエリエンジン
+  # アプリケーション: Alloy がコンテナログを収集・JSON パース・ラベル付与 -> Loki の push API に書き込み -> chunk 化して保存
+  # ブラウザ: Grafana で LogQL クエリ -> Loki でインデックス + chunk から検索 -> Grafana で可視化
+  # DOC: [Install Loki with Docker] https://grafana.com/docs/loki/latest/setup/install/docker/
+  loki:
+    image: grafana/loki:3.6.5
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./_docker/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki # ログデータ (chunk + index) の永続化
+    ports:
+      # Alloy からのログ書き込み (push API) / Grafana からのログクエリ (LogQL) 共通ポート
+      - "3100:3100"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Traces / Metrics / Logs を横断的に可視化するダッシュボード
+  # DOC: [Run Grafana Docker image] https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/
+  # DOC: [Configure a Grafana Docker image] https://grafana.com/docs/grafana/latest/setup-grafana/configure-docker/
+  grafana:
+    image: grafana/grafana:12.3.2
+
+    # ローカル開発用の認証設定: ログインなしで Admin 権限でアクセス可能にする (本番環境では使用しないこと)
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true # 匿名アクセスを許可
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin # 匿名ユーザーに Admin 権限を付与 (データソースやダッシュボードの編集が可能)
+      - GF_AUTH_DISABLE_LOGIN_FORM=true # ログインフォームを非表示にする
+
+    volumes:
+      # データソース定義 (datasources.yaml) を読み取り専用でマウント ※起動時に Tempo / Prometheus / Loki が自動登録される
+      - ./_docker/grafana/provisioning:/etc/grafana/provisioning:ro
+
+      # ダッシュボードや設定の永続化
+      - grafana-data:/var/lib/grafana
+
+    ports:
+      - "3000:3000" # Grafana Web UI (ブラウザから http://localhost:3000 でアクセス)
+
+    # Grafana は起動時にプロビジョニングでデータソースへの接続を確認するため、各バックエンドを先に起動する
+    depends_on:
+      tempo:
+        condition: service_started
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  tempo-data:
+  prometheus-data:
+  loki-data:
+  grafana-data:
