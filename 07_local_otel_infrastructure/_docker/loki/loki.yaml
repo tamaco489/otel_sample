@@ -1,3 +1,7 @@
+# Reference:
+# DOC: [Configure Loki] https://grafana.com/docs/loki/latest/configure/
+# DOC: [Getting Started Example] https://github.com/grafana/loki/tree/v3.6.0/examples/getting-started
+
 # マルチテナント認証を無効化 (有効の場合、全リクエストに X-Scope-OrgID ヘッダーが必要になるため)
 auth_enabled: false
 

@@ -19,6 +19,7 @@ services:
   #       max-file: "3"
 
   # テレメトリ収集・ログ転送を統合する OpenTelemetry ディストリビューション
+  # DOC: [Run Grafana Alloy in a Docker container] https://grafana.com/docs/alloy/latest/set-up/install/docker/
   alloy:
     image: grafana/alloy:v1.13.0
     command:
@@ -49,6 +50,7 @@ services:
         max-file: "3"
 
   # 分散トレースのバックエンドストレージ
+  # DOC: [Github] https://github.com/grafana/intro-to-mltp/blob/main/docker-compose.yml
   tempo:
     image: grafana/tempo:2.10.0
     command: ["-config.file=/etc/tempo/tempo.yaml"]
@@ -67,6 +69,7 @@ services:
   # メトリクスの収集・保存・クエリエンジン
   # アプリケーション: Alloy で Prometheus 形式に変換 -> Remote Write (メトリクス書き込み) -> Prometheus で受信しTSDB に保存
   # ブラウザ: Grafana で PromQL クエリ -> Prometheus で応答し TSDB から読み出し -> Grafana で可視化
+  # DOC: [Monitoring a Linux host with Prometheus, Node Exporter, and Docker Composes] https://grafana.com/docs/grafana-cloud/send-data/metrics/metrics-prometheus/prometheus-config-examples/docker-compose-linux/
   prometheus:
     image: prom/prometheus:v3.9.1
     command:
@@ -88,6 +91,7 @@ services:
   # ログの集約・インデックス・クエリエンジン
   # アプリケーション: Alloy がコンテナログを収集・JSON パース・ラベル付与 -> Loki の push API に書き込み -> chunk 化して保存
   # ブラウザ: Grafana で LogQL クエリ -> Loki でインデックス + chunk から検索 -> Grafana で可視化
+  # DOC: [Install Loki with Docker] https://grafana.com/docs/loki/latest/setup/install/docker/
   loki:
     image: grafana/loki:3.6.5
     command: ["-config.file=/etc/loki/loki.yaml"]

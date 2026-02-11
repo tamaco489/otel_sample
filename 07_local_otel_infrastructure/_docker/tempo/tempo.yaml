@@ -1,3 +1,6 @@
+# Reference:
+# DOC: [Github] https://github.com/grafana/intro-to-mltp/blob/main/tempo/tempo.yaml
+
 # Grafana がトレースクエリ結果をストリーミング形式で受け取れるようにする
 # スパン数が多いトレース (数百~数千スパン) を表じする際、全データの取得完了を待つと Grafana 側での表示遅延が発生する可能性があるため
 stream_over_http_enabled: true

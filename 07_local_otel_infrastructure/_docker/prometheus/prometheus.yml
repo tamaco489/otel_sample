@@ -1,3 +1,6 @@
+# Reference:
+# DOC: [Configuration] https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
 global:
   # ターゲットからメトリクスを取得する間隔 (Prometheus のデフォルト値)
   scrape_interval: 15s
