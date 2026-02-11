@@ -1,19 +1,33 @@
+# Grafana がトレースクエリ結果をストリーミング形式で受け取れるようにする
+# スパン数が多いトレース (数百~数千スパン) を表じする際、全データの取得完了を待つと Grafana 側での表示遅延が発生する可能性があるため
 stream_over_http_enabled: true
 
 server:
+  # Tempo の HTTP API ポート (Grafana は 3200 番ポートで接続し、トレースクエリを実行する)
   http_listen_port: 3200
 
+# トレースデータの受信設定
 distributor:
   receivers:
     otlp:
       protocols:
         grpc:
+          # Alloy からの gRPC 転送を受け付ける
+          # Tempo に 直接トレースを送信するのは Alloy のみのため、HTTP の設定は不要
           endpoint: 0.0.0.0:4317
 
+# トレースデータの保存設定
 storage:
   trace:
+    # ローカルファイルシステムに保存 (本番環境では s3 や gcs の使用が推奨される)
     backend: local
-    local:
-      path: /var/tempo/traces
+
+    # Write-Ahead Log: 受信したスパンがまだ圧縮・インデックス付与されていない未確定の状態 (ブロック化前の状態) で追記される
+    # 受信したトレースをストレージにフラッシュするまでの一時的な保存場所 (クラッシュ時はここからデータを復元できる)
     wal:
       path: /var/tempo/wal
+
+    # 確定済みトレースブロックの保存先
+    # WAL に溜まったスパンが一定量まとまると圧縮・インデックス付与され、読み取り専用のブロックファイルとしてここに保存される
+    local:
+      path: /var/tempo/traces

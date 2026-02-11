@@ -41,8 +41,7 @@ services:
       loki:
         condition: service_started
     # ログを JSON 形式でファイル保存し、1 ファイル 10MB x 最大 3 ファイル (= 30MB) でローテーション
-    # 未設定の場合、コンテナを長時間起動していた際にログが無制限に増えてディスクを圧迫するため。
-    # Alloy の stage.docker はこの json-file ドライバの出力をパースする
+    # 未設定の場合、コンテナを長時間起動していた際にログが無制限に増えてディスクを圧迫するため (Alloy の stage.docker はこの json-file ドライバの出力をパースする)
     logging:
       driver: json-file
       options:
@@ -51,13 +50,13 @@ services:
 
   # 分散トレースのバックエンドストレージ
   tempo:
-    image: grafana/tempo:2.7.2
+    image: grafana/tempo:2.10.0
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
       - ./_docker/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
-      - tempo-data:/var/tempo
+      - tempo-data:/var/tempo # トレースデータ (WAL + ブロック) の永続化
     ports:
-      - "3200:3200"
+      - "3200:3200" # Grafana (ブラウザ) でトレースの検索・取得を行う際に必要 ※4317 (gRPC 受信) は内部通信のみのためホストに公開しない
     logging:
       driver: json-file
       options:
