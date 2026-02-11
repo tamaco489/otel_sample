@@ -104,17 +104,28 @@ services:
         max-file: "3"
 
   # Traces / Metrics / Logs を横断的に可視化するダッシュボード
+  # DOC: [Run Grafana Docker image] https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/
+  # DOC: [Configure a Grafana Docker image] https://grafana.com/docs/grafana/latest/setup-grafana/configure-docker/
   grafana:
-    image: grafana/grafana:11.5.2
+    image: grafana/grafana:12.3.2
+
+    # ローカル開発用の認証設定: ログインなしで Admin 権限でアクセス可能にする (本番環境では使用しないこと)
     environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true # 匿名アクセスを許可
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin # 匿名ユーザーに Admin 権限を付与 (データソースやダッシュボードの編集が可能)
+      - GF_AUTH_DISABLE_LOGIN_FORM=true # ログインフォームを非表示にする
+
     volumes:
+      # データソース定義 (datasources.yaml) を読み取り専用でマウント ※起動時に Tempo / Prometheus / Loki が自動登録される
       - ./_docker/grafana/provisioning:/etc/grafana/provisioning:ro
+
+      # ダッシュボードや設定の永続化
       - grafana-data:/var/lib/grafana
+
     ports:
-      - "3000:3000"
+      - "3000:3000" # Grafana Web UI (ブラウザから http://localhost:3000 でアクセス)
+
+    # Grafana は起動時にプロビジョニングでデータソースへの接続を確認するため、各バックエンドを先に起動する
     depends_on:
       tempo:
         condition: service_started
