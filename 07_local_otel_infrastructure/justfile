@@ -6,10 +6,6 @@ default:
 up:
     docker compose up -d
 
-# 全サービスをフォアグラウンドで起動 (ログをリアルタイム表示)
-up-fg:
-    docker compose up
-
 # 全サービスを停止
 stop:
     docker compose stop
