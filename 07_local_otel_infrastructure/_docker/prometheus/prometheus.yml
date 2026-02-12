@@ -2,11 +2,11 @@
 # DOC: [Configuration] https://prometheus.io/docs/prometheus/latest/configuration/configuration/
 
 global:
-  # ターゲットからメトリクスを取得する間隔 (Prometheus のデフォルト値)
-  scrape_interval: 15s
+  # ターゲットからメトリクスを取得する間隔 (デフォルト 15s)
+  scrape_interval: 20s
 
   # アラートルールの評価間隔 (この構成では未使用だが global の必須フィールド)
-  evaluation_interval: 15s
+  evaluation_interval: 20s
 
 # Prometheus が能動的にメトリクスを取りに行く (pull 型) ターゲットの定義
 # アプリケーションのメトリクスは Alloy の Remote Write (push型) で別途受信しているためここには含まれない (スクレイプしない)
