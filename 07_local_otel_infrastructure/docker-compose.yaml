@@ -3,11 +3,11 @@ services:
   # article-server:
   #   build:
   #     context: .
-  #     dockerfile: Dockerfile
+  #     dockerfile: article_server/Dockerfile
   #   ports:
   #     - "8080:8080"
   #   environment:
-  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=alloy:4317
   #     - OTEL_SERVICE_NAME=article-server
   #   depends_on:
   #     alloy:
@@ -114,13 +114,10 @@ services:
   grafana:
     image: grafana/grafana:12.3.2
 
-    # ローカル開発用の認証設定: ログインなしで Admin 権限でアクセス可能にする (本番環境では使用しないこと)
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true # 匿名アクセスを許可
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin # 匿名ユーザーに Admin 権限を付与 (データソースやダッシュボードの編集が可能)
-      - GF_AUTH_DISABLE_LOGIN_FORM=true # ログインフォームを非表示にする
-
     volumes:
+      # Grafana 設定ファイル (ユーザー設定・Admin ユーザー設定を管理)
+      - ./_docker/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+
       # データソース定義 (datasources.yaml) を読み取り専用でマウント ※起動時に Tempo / Prometheus / Loki が自動登録される
       - ./_docker/grafana/provisioning:/etc/grafana/provisioning:ro
 
@@ -143,3 +140,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # Grafana セットアップサービス (組織名などの初期設定)
+  grafana-init:
+    image: curlimages/curl:latest
+    depends_on:
+      grafana:
+        condition: service_started
+    volumes:
+      - ./_docker/grafana/setup.sh:/setup.sh:ro
+    command: sh /setup.sh
+    restart: "no" # 一度だけ実行
